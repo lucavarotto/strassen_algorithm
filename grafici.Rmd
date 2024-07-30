@@ -1,0 +1,255 @@
+---
+title: "Grafici per il report sull'algoritmo di Strassen"
+author: "Luca Varotto"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: TRUE
+    toc_depth: 2
+    number_section: TRUE
+    highlight: tango
+lang: ita
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.path = "figures/")
+```
+
+\newpage
+
+# Scelta di Q
+
+Detto Q il "crossover point", ossia la dimensione limite di una una matrice per cui l'algoritmo di Strassen diventa pi
+
+
+```{r q_test}
+rm(list=ls())
+dat <- read.table("dataset/q_test.txt", header=T, sep=",")
+
+np <- nrow(dat)
+n <- length(unique(dat$ID))
+p <- np/n
+
+dat$ID <- as.factor(dat$ID)
+dat$a <- as.factor(dat$a)
+dat$b <- as.factor(dat$b)
+dat$c <- as.factor(dat$c)
+
+summary(dat)
+
+str(dat)
+
+nomi <- c("Riga per colonna", "Dynamic padding", "Static padding", "Dynamic peeling")
+```
+
+## traiettorie individuali
+
+```{r traiettorie_individuali,eval=FALSE, include=FALSE,echo=FALSE}
+for (i in seq(1,np,p)){
+  
+  plot(0,0,xlim=range(unique(dat$Q)),ylim=range(dat[,7:10]), axes=F, xlab="Q", ylab="tempo in secondi")
+  axis(1, at = c(0,unique(dat$Q)))
+  axis(2, seq(0,max(dat[,7:10]),1))
+  
+  lines(x=dat$Q[i:(i+p-1)],y=dat$riga_per_colonna[i:(i+p-1)], type='b', lwd=2)
+  lines(x=dat$Q[i:(i+p-1)],y=dat$dynamic_time[i:(i+p-1)], type='b', col='red', lwd=2)
+  lines(x=dat$Q[i:(i+p-1)],y=dat$static_time[i:(i+p-1)], type='b', col='blue', lwd=2)
+  lines(x=dat$Q[i:(i+p-1)],y=dat$peeling_time[i:(i+p-1)], type='b', col='purple', lwd=2)
+  
+  legend('topright', col=c('black','red','blue', 'purple'), lty=c(1,1,1,1), legend=nomi)
+}
+```
+
+## Grafico con le medie
+
+```{r q_mean}
+t.bar <- sapply(unique(dat$Q), function(x) colMeans(dat[dat$Q==x,7:10]) )
+unique_q <- unique(dat$Q)
+colnames(t.bar) <- unique_q
+t.bar
+
+plot(0,0,xlim=range(unique(dat$Q)),ylim=range(t.bar), axes=F, xlab="Q", ylab="tempo in secondi")
+axis(1, at = c(0,unique(dat$Q)))
+axis(2, seq(0,max(t.bar),1))
+
+lines(x=unique_q,y=t.bar[1,], type='b', col='blue', lwd=2, lty=1)
+lines(x=unique_q,y=t.bar[2,], type='b', col='red', lwd=2, lty=2)
+lines(x=unique(dat$Q),y=t.bar[3,], type='b', col='green', lwd=2, lty=3)
+lines(x=unique(dat$Q),y=t.bar[4,], type='b', col='purple', lwd=2, lty=4)
+
+nomi <- c("Riga per colonna", "Dynamic padding", "Static padding", "Dynamic peeling")
+
+legend('topright', col=c('blue','red','green', "purple"), lty=c(1,2,3,4), legend=nomi, lwd=2)
+```
+
+
+# sparse vs dense
+
+
+
+```{r sparse_vs_dense}
+rm(list=ls())
+dat <- read.table("dataset/sparse_vs_dense.txt", header=T, sep=",", row.names = )
+
+np <- nrow(dat)
+n <- length(unique(dat$ID))
+
+dat$ID <- as.factor(dat$ID)
+
+summary(dat)
+
+str(dat)
+
+dense.bar <- colMeans(dat[dat$tipo==dat$tipo[1],7:10])
+sparse.bar <- colMeans(dat[dat$tipo==dat$tipo[np],7:10])
+
+nomi <- c("riga per colonna", "dynamic padding", "static padding", "dynamic peeling")
+
+# Creazione del dataframe
+dati <- data.frame(tipo = rep(c("Dense", "Sparse"), each = length(dense.bar)), algoritmo = rep(nomi, 2),
+                    valore = c(dense.bar, sparse.bar))
+
+library(ggplot2)
+# Creazione del grafico con ggplot2
+ggplot(dati, aes(x = tipo, y = valore, fill = algoritmo)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_hue() +  # Automatic color fill
+  labs(x = "Algoritmo", y = "Tempo in secondi") +
+  theme_minimal()
+```
+
+
+# lunghe vs larghe
+
+
+```{r matrici_sbilanciate}
+rm(list=ls())
+dat <- read.table("dataset/lunghe_vs_larghe.txt" , header=T, sep=",")
+
+np <- nrow(dat)
+n <- length(unique(dat$ID))
+
+dat$ID <- as.factor(dat$ID)
+
+summary(dat)
+
+str(dat)
+
+apiccolo.bar <- colMeans(dat[dat$tipo==dat$tipo[1],7:10])
+bpiccolo.bar <- colMeans(dat[dat$tipo=="b_piccolo",7:10])
+cpiccolo.bar <- colMeans(dat[dat$tipo==dat$tipo[np],7:10])
+
+nomi <- c("riga per colonna", "dynamic padding", "static padding", "dynamic peeling")
+
+# Creazione del dataframe per ggplot
+dati <- data.frame(tipo = rep(c("A larga", "A lunga e B larga", "B lunga"), each = length(apiccolo.bar)), algoritmo = rep(nomi, 3),
+              valore = c(apiccolo.bar, bpiccolo.bar, cpiccolo.bar))
+
+library(ggplot2)
+ggplot(dati, aes(x = tipo, y = valore, fill = algoritmo)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_hue() +
+  labs(x = "Algoritmo",
+       y = "Tempo in secondi") +
+  theme_minimal()
+```
+
+# dimensioni crescenti
+
+
+```{r test_dimensioni}
+rm(list=ls())
+dat <- read.table("dataset/dimensioni.txt", header=T, sep=",", row.names = )
+
+np <- nrow(dat)
+n <- length(unique(dat$ID))
+
+dat$ID <- as.factor(dat$ID)
+
+summary(dat)
+str(dat)
+
+media_geom <- apply(dat[,4:6],1, function(x) (prod(x))^(1/3))
+
+nomi <- c("Riga per colonna", "Dynamic padding", "Static padding", "Dynamic peeling")
+
+# Create a data frame for plotting
+plot_data <- data.frame(
+  media_geom = media_geom,
+  algoritmo = rep(nomi, each = np),
+  tempo_medio = c(dat[,7], dat[,8], dat[,9], dat[,10])
+)
+
+library(ggplot2)
+ggplot(plot_data, aes(x = media_geom, y = tempo_medio, color = algoritmo, shape = algoritmo)) +
+  geom_point() +
+  labs(x = "Media geometrica delle dimensioni", y = "Tempo in secondi") +
+  scale_fill_hue() +  # Automatic color fill
+  theme_minimal()
+```
+
+# q-basso
+
+```{r q_basso}
+rm(list=ls())
+dat <- read.table("dataset/minimum_q", header=T, sep=",")
+
+np <- nrow(dat)
+n <- length(unique(dat$ID))
+p <- np/n
+
+dat$ID <- as.factor(dat$ID)
+dat$a <- as.factor(dat$a)
+dat$b <- as.factor(dat$b)
+dat$c <- as.factor(dat$c)
+
+summary(dat)
+
+str(dat)
+
+# Calculate means
+t.bar <- colMeans(dat[,7:10])
+t.bar
+unique_q <- unique(dat$Q)
+nomi <- c("Riga per colonna", "Dynamic padding", "Static padding", "Dynamic peeling")
+
+# Create dataframe
+dati <- data.frame(tipo = nomi, algoritmo = as.numeric(t.bar))
+
+# Plot with enhancements
+ggplot(dati, aes(x = tipo, y = algoritmo, fill = tipo)) + 
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
+  geom_text(aes(label = round(algoritmo, 2)), vjust = -0.5, size = 3, position = position_dodge(width = 0.7)) +
+  labs(x = "Algoritmo", y = "Tempo in secondi") + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+```
+
+# floating time
+
+```{r integer_vs_floating}
+rm(list=ls())
+dat <- read.table("dataset/sparse_vs_dense.txt", header=T, sep=",", row.names = )
+dense <- dat[dat$tipo=='densa',]
+
+floating <- read.table("dataset/on_floating.txt", header=T, sep=",", row.names = )
+
+dat <- rbind(dense, floating)
+
+interi.bar <- colMeans(dat[dat$tipo=='densa', 7:10])
+floating.bar <- colMeans(dat[dat$tipo=='floating', 7:10])
+
+
+nomi <- c("Riga per colonna", "Dynamic padding", "Static padding", "Dynamic peeling")
+
+# Creazione del dataframe
+dati <- data.frame(tipo = rep(c("Interi", "Floating"), each = length(interi.bar)), algoritmo = rep(nomi, 2), valore = c(interi.bar, floating.bar))
+
+library(ggplot2)
+# Creazione del grafico con ggplot2
+ggplot(dati, aes(x = tipo, y = valore, fill = algoritmo)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_hue() +  # Automatic color fill
+  labs(x = "Algoritmo", y = "Tempo in secondi") +
+  theme_minimal()
+```
