@@ -1,4 +1,4 @@
-In 1969, V. Strassen presented an algorithm to reduce the complexity of matrix multiplications from O(n^3) to O(n^2.807) using a recursive approach. This repository contains code for various implementations of the original algorithm, testing scripts, and a detailed report on the algorithm.
+In 1969, V. Strassen presented an algorithm to reduce the complexity of matrix multiplications from O(n^3) to O(n^2.807) using a recursive approach. This repository contains code for various implementations of the original algorithm, testing scripts, and a detailed report on the algorithm that I developed for the Computer Systems 2 exam.
 
 Files Included:
 
